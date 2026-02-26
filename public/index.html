@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SecureBank — AI Banking Avatar</title>
+    <meta name="description" content="24/7 AI-powered banking assistant with voice, avatar, and multilingual support">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+    <!-- Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+        }
+    }
+    </script>
+    <!-- face-api.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+</head>
+
+<body>
+    <div class="app-wrapper">
+        <!-- Background glows -->
+        <div class="bg-glow bg-glow--1"></div>
+        <div class="bg-glow bg-glow--2"></div>
+
+        <!-- ═══════════════════════════════════════════════
+         AUTH SCREEN
+         ═══════════════════════════════════════════════ -->
+        <div id="authScreen" class="auth-screen">
+            <div class="auth-card">
+                <div class="auth-logo">
+                    <span class="auth-logo__icon">🏦</span>
+                    <span class="auth-logo__text" data-i18n="appName">SecureBank AI</span>
+                </div>
+                <p class="auth-subtitle" data-i18n="subtitle">Your intelligent banking assistant</p>
+
+                <!-- Language selector -->
+                <div class="lang-row">
+                    <select id="langSelector" class="lang-selector">
+                        <option value="en">🇬🇧 English</option>
+                        <option value="hi">🇮🇳 हिंदी</option>
+                        <option value="mr">🇮🇳 मराठी</option>
+                    </select>
+                </div>
+
+                <!-- Tabs -->
+                <div class="auth-tabs">
+                    <button id="tabSignIn" class="auth-tab auth-tab--active" data-i18n="signIn">Sign In</button>
+                    <button id="tabSignUp" class="auth-tab" data-i18n="signUp">Sign Up</button>
+                    <button id="tabOtp" class="auth-tab" data-i18n="otpLogin">OTP Login</button>
+                </div>
+
+                <!-- SIGN IN Form -->
+                <form id="signinForm" class="auth-form">
+                    <div class="form-group">
+                        <label data-i18n="email">Email Address</label>
+                        <input type="text" id="siEmail" placeholder="you@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="password">Password</label>
+                        <input type="password" id="siPassword" placeholder="••••••••" required>
+                    </div>
+                    <p id="siError" class="auth-error"></p>
+                    <button type="submit" class="auth-btn" data-i18n="signInBtn">Sign In</button>
+                    <div class="auth-divider"><span data-i18n="orDivider">or</span></div>
+                    <button type="button" id="googleLoginBtn" class="auth-btn auth-btn--google">
+                        <span>G</span> <span data-i18n="googleLogin">Continue with Google</span>
+                    </button>
+                </form>
+
+                <!-- SIGN UP Form -->
+                <form id="signupForm" class="auth-form" style="display:none">
+                    <div class="form-group">
+                        <label data-i18n="name">Full Name</label>
+                        <input type="text" id="suName" placeholder="Bhumika Sharma" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="email">Email Address</label>
+                        <input type="email" id="suEmail" placeholder="you@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="phone">Phone Number</label>
+                        <input type="tel" id="suPhone" placeholder="+91 98765 43210">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group form-group--half">
+                            <label data-i18n="gender">Gender</label>
+                            <select id="suGender">
+                                <option value="female" data-i18n="female">Female</option>
+                                <option value="male" data-i18n="male">Male</option>
+                                <option value="neutral" data-i18n="neutral">Prefer not to say</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-group--half">
+                            <label data-i18n="language">Language</label>
+                            <select id="suLang">
+                                <option value="en">English</option>
+                                <option value="hi">हिंदी</option>
+                                <option value="mr">मराठी</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="password">Password</label>
+                        <input type="password" id="suPassword" placeholder="••••••••" required>
+                    </div>
+                    <p id="suError" class="auth-error"></p>
+                    <button type="submit" class="auth-btn" data-i18n="createAccount">Create Account</button>
+                </form>
+
+                <!-- OTP Form -->
+                <form id="otpForm" class="auth-form" style="display:none">
+                    <div class="form-group">
+                        <label data-i18n="phone">Phone Number</label>
+                        <input type="tel" id="otpPhone" placeholder="+91 98765 43210" required>
+                    </div>
+                    <div id="otpCodeGroup" class="form-group" style="display:none">
+                        <label data-i18n="enterOtp">Enter 6-digit OTP</label>
+                        <input type="text" id="otpCode" placeholder="123456" maxlength="6">
+                    </div>
+                    <p id="otpError" class="auth-error"></p>
+                    <button type="submit" id="otpSubmitBtn" class="auth-btn" data-i18n="sendOtp">Send OTP</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════
+         APP SCREEN
+         ═══════════════════════════════════════════════ -->
+        <div id="appScreen" class="app-screen" style="display:none">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="top-bar__brand">
+                    <span class="top-bar__logo">🏦</span>
+                    <span class="top-bar__name" data-i18n="appName">SecureBank AI</span>
+                </div>
+                <div class="top-bar__right">
+                    <div id="riskBadge" class="risk-badge">
+                        <span class="risk-dot"></span>
+                        <span id="riskLabel" data-i18n="secure">Secure</span>
+                    </div>
+                    <button id="profileBtn" class="profile-btn" aria-label="Profile">
+                        <span id="profileInitial">👤</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Profile Dropdown -->
+            <div id="profileDropdown" class="profile-dropdown" style="display:none">
+                <div id="profileName" class="profile-dropdown__name">User</div>
+                <div id="profileEmail" class="profile-dropdown__email"></div>
+                <hr>
+                <button id="ttsToggle" class="profile-dropdown__item">
+                    <span id="ttsIcon">🔊</span> <span data-i18n="tts">Voice</span>: <span id="ttsLabel">On</span>
+                </button>
+                <button id="resetBtn" class="profile-dropdown__item" data-i18n="newSession">New Session</button>
+                <hr>
+                <button id="logoutBtn" class="profile-dropdown__item profile-dropdown__item--danger"
+                    data-i18n="logout">Logout</button>
+            </div>
+
+            <!-- Avatar Stage -->
+            <div class="avatar-stage">
+                <div class="avatar-aura" id="avatarAura"></div>
+                <div id="avatarCanvasWrapper" class="avatar-canvas-wrapper"></div>
+                <div id="avatarLoading" class="avatar-loading">
+                    <div class="loading-spinner"></div>
+                    <span>Loading avatar...</span>
+                </div>
+
+                <!-- Holo Panels -->
+                <div id="holoEmotion" class="holo-panel holo-panel--emotion" style="display:none">
+                    <div class="holo-panel__label">EMOTION</div>
+                    <div id="holoEmotionValue" class="holo-panel__value">😐 Neutral</div>
+                </div>
+            </div>
+
+            <!-- Bottom Control Bar -->
+            <div class="bottom-bar">
+                <button id="cameraBtn" class="bottom-btn" aria-label="Face Detection">
+                    <span class="bottom-btn__icon">📸</span>
+                    <span class="bottom-btn__label">Face</span>
+                </button>
+                <button id="snowBtn" class="bottom-btn" aria-label="ServiceNow">
+                    <span class="bottom-btn__icon">🎫</span>
+                    <span class="bottom-btn__label">Tickets</span>
+                </button>
+                <button id="micBtn" class="mic-btn" aria-label="Voice Input">🎤</button>
+                <button id="waBtn" class="bottom-btn" aria-label="WhatsApp">
+                    <span class="bottom-btn__icon">📱</span>
+                    <span class="bottom-btn__label">WhatsApp</span>
+                </button>
+                <button id="chatToggleBtn" class="bottom-btn" aria-label="Toggle Chat">
+                    <span class="bottom-btn__icon">💬</span>
+                    <span class="bottom-btn__label" data-i18n="chat">Chat</span>
+                </button>
+            </div>
+
+            <!-- ═══════════════════════════════════════════
+             CHAT OVERLAY (slide-up)
+             ═══════════════════════════════════════════ -->
+            <div id="chatOverlay" class="chat-overlay" style="display:none">
+                <div class="chat-overlay__header">
+                    <div class="chat-overlay__title">💬 <span data-i18n="chat">Chat</span></div>
+                    <button id="chatCloseBtn" class="chat-overlay__close">✕</button>
+                </div>
+                <div id="chatMessages" class="chat-messages"></div>
+
+                <div id="quickActions" class="quick-actions">
+                    <button class="chip" data-msg="Check my balance" data-i18n="balance">Balance</button>
+                    <button class="chip" data-msg="Tell me about my loan" data-i18n="loan">Loan</button>
+                    <button class="chip" data-msg="Government schemes" data-i18n="schemes">Schemes</button>
+                    <button class="chip" data-msg="I need help" data-i18n="help">Help</button>
+                    <button class="chip" data-msg="Transfer money" data-i18n="transfer">Transfer</button>
+                </div>
+
+                <div class="chat-input-area">
+                    <div class="input-row">
+                        <div class="input-wrapper">
+                            <textarea id="chatInput" class="chat-input" rows="1" data-i18n="typeMessage"
+                                placeholder="Type a message..."></textarea>
+                        </div>
+                        <button id="sendBtn" class="send-btn" disabled>➤</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════
+                 SERVICENOW OVERLAY
+                 ═══════════════════════════════════════════ -->
+            <div id="snowOverlay" class="chat-overlay" style="display:none">
+                <div class="chat-overlay__header">
+                    <div class="chat-overlay__title">🎫 ServiceNow Incidents</div>
+                    <button id="snowCloseBtn" class="chat-overlay__close">✕</button>
+                </div>
+                <div class="snow-body">
+                    <!-- Create Incident -->
+                    <div class="snow-section">
+                        <h3 class="snow-section__title">Create New Incident</h3>
+                        <div class="form-group">
+                            <label>Short Description</label>
+                            <input type="text" id="snowDesc" placeholder="e.g. Suspicious transaction reported">
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group form-group--half">
+                                <label>Category</label>
+                                <select id="snowCategory">
+                                    <option value="Financial Fraud">Financial Fraud</option>
+                                    <option value="Account Issue">Account Issue</option>
+                                    <option value="KYC">KYC</option>
+                                    <option value="Complaint">Complaint</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group form-group--half">
+                                <label>Priority</label>
+                                <select id="snowPriority">
+                                    <option value="1">🔴 Critical</option>
+                                    <option value="2" selected>🟠 High</option>
+                                    <option value="3">🟡 Medium</option>
+                                    <option value="4">🟢 Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Details</label>
+                            <textarea id="snowDetails" rows="2" placeholder="Additional details..."></textarea>
+                        </div>
+                        <button id="snowCreateBtn" class="auth-btn">🎫 Create Incident</button>
+                        <p id="snowResult" class="snow-result"></p>
+                    </div>
+                    <hr>
+                    <!-- Incident List -->
+                    <div class="snow-section">
+                        <div class="snow-section__header">
+                            <h3 class="snow-section__title">Recent Incidents</h3>
+                            <button id="snowRefreshBtn" class="snow-refresh-btn">🔄</button>
+                        </div>
+                        <div id="snowIncidents" class="snow-incidents">
+                            <p class="snow-empty">No incidents yet. Incidents are auto-created when fraud is detected.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════
+                 WHATSAPP OVERLAY
+                 ═══════════════════════════════════════════ -->
+            <div id="waOverlay" class="chat-overlay" style="display:none">
+                <div class="chat-overlay__header">
+                    <div class="chat-overlay__title">📱 WhatsApp Integration</div>
+                    <button id="waCloseBtn" class="chat-overlay__close">✕</button>
+                </div>
+                <div class="wa-body">
+                    <!-- Status -->
+                    <div class="wa-status-card" id="waStatusCard">
+                        <div class="wa-status-dot" id="waStatusDot"></div>
+                        <div>
+                            <div class="wa-status-title" id="waStatusTitle">Checking connection...</div>
+                            <div class="wa-status-sub" id="waStatusSub">Loading</div>
+                        </div>
+                    </div>
+
+                    <!-- Send Message -->
+                    <div class="snow-section">
+                        <h3 class="snow-section__title">Send WhatsApp Message</h3>
+                        <div class="form-group">
+                            <label>Phone Number (with country code)</label>
+                            <input type="tel" id="waPhone" placeholder="919876543210">
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea id="waMessage" rows="2" placeholder="Type message..."></textarea>
+                        </div>
+                        <button id="waSendBtn" class="auth-btn">📱 Send via WhatsApp</button>
+                        <p id="waResult" class="snow-result"></p>
+                    </div>
+                    <hr>
+                    <!-- Message Log -->
+                    <div class="snow-section">
+                        <div class="snow-section__header">
+                            <h3 class="snow-section__title">Message Log</h3>
+                            <button id="waLogRefreshBtn" class="snow-refresh-btn">🔄</button>
+                        </div>
+                        <div id="waLog" class="wa-log">
+                            <p class="snow-empty">No messages yet. Messages will appear when WhatsApp webhook receives
+                                them.</p>
+                        </div>
+                    </div>
+
+                    <!-- Setup Guide -->
+                    <div class="snow-section wa-setup-guide">
+                        <h3 class="snow-section__title">⚙️ Setup Guide</h3>
+                        <ol class="wa-steps">
+                            <li>Create <b>Meta Business</b> account</li>
+                            <li>Set up <b>WhatsApp Business API</b></li>
+                            <li>Add your <b>WHATSAPP_TOKEN</b>, <b>WHATSAPP_PHONE_ID</b> to <code>.env</code></li>
+                            <li>Set webhook URL: <code>your-domain/api/whatsapp/webhook</code></li>
+                            <li>Set verify token: <code>chatbot_verify</code></li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════
+         WEBCAM MODAL
+         ═══════════════════════════════════════════════ -->
+        <div id="webcamOverlay" class="webcam-overlay" style="display:none">
+            <div class="webcam-modal">
+                <div class="webcam-modal__header">
+                    <h2 data-i18n="faceRecognition">Face Recognition</h2>
+                    <button id="webcamCloseBtn" class="webcam-close-btn">✕</button>
+                </div>
+                <div class="webcam-modal__body">
+                    <video id="webcamVideo" autoplay muted playsinline></video>
+                    <canvas id="webcamCanvas"></canvas>
+                    <div class="webcam-emotion-display">
+                        <span id="webcamEmoji">🔍</span>
+                        <span id="webcamEmotionText" data-i18n="detecting">Detecting...</span>
+                    </div>
+                </div>
+                <div class="webcam-modal__footer">
+                    <button id="webcamCaptureBtn" class="webcam-capture-btn">Capture & Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
+</body>
+
+</html>

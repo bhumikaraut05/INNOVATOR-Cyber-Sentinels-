@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="AI Banking Avatar — Full-body 3D assistant with fraud detection" />
+  <title>SecureBank — AI Banking Avatar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Three.js ES Module Import Map -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <!-- face-api.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+</head>
+
+<body>
+  <div class="app-wrapper">
+    <!-- Background glows -->
+    <div class="bg-glow bg-glow--1"></div>
+    <div class="bg-glow bg-glow--2"></div>
+
+    <!-- ══════════════════════════════════════════════════════
+         AUTH SCREEN
+    ══════════════════════════════════════════════════════ -->
+    <div class="auth-screen" id="authScreen">
+      <div class="auth-card">
+        <div class="auth-logo">
+          <span class="auth-logo__icon">🏦</span>
+          <span class="auth-logo__text">SecureBank AI</span>
+        </div>
+        <p class="auth-subtitle">Your AI-powered banking assistant</p>
+
+        <!-- Tab Switcher -->
+        <div class="auth-tabs">
+          <button class="auth-tab auth-tab--active" id="tabSignIn" data-tab="signin">Sign In</button>
+          <button class="auth-tab" id="tabSignUp" data-tab="signup">Sign Up</button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form class="auth-form" id="signinForm">
+          <div class="form-group">
+            <label for="siIdentifier">Phone or Email</label>
+            <input type="text" id="siIdentifier" placeholder="Enter phone or email" autocomplete="username" required />
+          </div>
+          <div class="form-group">
+            <label for="siPassword">Password</label>
+            <input type="password" id="siPassword" placeholder="Enter password" autocomplete="current-password"
+              required />
+          </div>
+          <button type="submit" class="auth-btn" id="signinBtn">Sign In</button>
+          <div class="auth-divider"><span>or</span></div>
+          <button type="button" class="auth-btn auth-btn--face" id="faceLoginBtn">
+            📸 Sign In with Face Recognition
+          </button>
+          <p class="auth-error" id="signinError"></p>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form class="auth-form" id="signupForm" style="display:none;">
+          <div class="form-group">
+            <label for="suName">Full Name</label>
+            <input type="text" id="suName" placeholder="Enter your name" required />
+          </div>
+          <div class="form-group">
+            <label for="suPhone">Phone Number</label>
+            <input type="tel" id="suPhone" placeholder="Enter phone number" required />
+          </div>
+          <div class="form-group">
+            <label for="suEmail">Email</label>
+            <input type="email" id="suEmail" placeholder="Enter email address" required />
+          </div>
+          <div class="form-group">
+            <label for="suGender">Gender</label>
+            <select id="suGender">
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="neutral">Prefer not to say</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="suPassword">Set Password</label>
+            <input type="password" id="suPassword" placeholder="Create a password" autocomplete="new-password"
+              required />
+          </div>
+          <button type="submit" class="auth-btn" id="signupBtn">Create Account</button>
+          <p class="auth-error" id="signupError"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════
+         MAIN APP SCREEN (hidden until login)
+    ══════════════════════════════════════════════════════ -->
+    <div class="app-screen" id="appScreen" style="display:none;">
+
+      <!-- ── Top Bar ──────────────────────────────────────── -->
+      <div class="top-bar">
+        <div class="top-bar__brand">
+          <span class="top-bar__logo">🏦</span>
+          <span class="top-bar__name">SecureBank</span>
+        </div>
+        <div class="top-bar__right">
+          <div class="risk-badge" id="riskBadge">
+            <span class="risk-dot" id="riskDot"></span>
+            <span class="risk-label" id="riskLabel">Secure</span>
+          </div>
+          <button class="profile-btn" id="profileBtn" title="Profile">
+            <span id="profileInitial">👤</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Avatar Area (75% of screen) ──────────────────── -->
+      <div class="avatar-stage" id="avatarStage">
+        <div class="avatar-aura" id="avatarAura"></div>
+        <div class="avatar-canvas-wrapper" id="avatarCanvasWrapper">
+          <!-- Three.js canvas injected -->
+          <div class="avatar-loading" id="avatarLoading">
+            <div class="loading-spinner"></div>
+            <span>Loading Avatar...</span>
+          </div>
+        </div>
+        <!-- Holographic Panels -->
+        <div class="holo-panel holo-panel--emotion" id="holoEmotion" style="display:none;">
+          <div class="holo-panel__label">😊 Emotion</div>
+          <div class="holo-panel__value" id="holoEmotionValue">Neutral</div>
+        </div>
+        <div class="holo-panel holo-panel--fraud" id="holoFraud" style="display:none;">
+          <div class="holo-panel__label">🛡️ Risk</div>
+          <div class="holo-panel__value" id="holoFraudValue">🟢 LOW — 0/100</div>
+        </div>
+      </div>
+
+      <!-- ── Bottom Control Bar ───────────────────────────── -->
+      <div class="bottom-bar">
+        <button class="bottom-btn" id="cameraBtn" title="Face Detect">
+          <span class="bottom-btn__icon">📸</span>
+          <span class="bottom-btn__label">Face</span>
+        </button>
+
+        <button class="mic-btn" id="micBtn" title="Speak">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="23" />
+            <line x1="8" y1="23" x2="16" y2="23" />
+          </svg>
+        </button>
+
+        <button class="bottom-btn" id="chatToggleBtn" title="Chat">
+          <span class="bottom-btn__icon">💬</span>
+          <span class="bottom-btn__label">Chat</span>
+        </button>
+      </div>
+
+      <!-- ── Chat Overlay (slide-up) ──────────────────────── -->
+      <div class="chat-overlay" id="chatOverlay" style="display:none;">
+        <div class="chat-overlay__header">
+          <div class="chat-overlay__title">
+            <span>🤖</span>
+            <span>AI Banking Assistant</span>
+          </div>
+          <button class="chat-overlay__close" id="chatCloseBtn">✕</button>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="quick-actions" id="quickActions">
+          <button class="chip" data-msg="Check my balance">💰 Balance</button>
+          <button class="chip" data-msg="Show my transactions">📋 Transactions</button>
+          <button class="chip" data-msg="Loan status">🏠 Loan</button>
+          <button class="chip" data-msg="Government schemes">🌾 Schemes</button>
+          <button class="chip" data-msg="What can you do?">❓ Help</button>
+        </div>
+        <div class="chat-input-area">
+          <div class="input-row">
+            <select class="lang-select-mini" id="langSelect" aria-label="Language">
+              <option value="en-IN">EN</option>
+              <option value="hi-IN">HI</option>
+              <option value="mr-IN">MR</option>
+            </select>
+            <div class="input-wrapper">
+              <textarea class="chat-input" id="chatInput" placeholder="Type a message..." rows="1"></textarea>
+            </div>
+            <button class="send-btn" id="sendBtn" disabled aria-label="Send">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Profile Dropdown ─────────────────────────────── -->
+      <div class="profile-dropdown" id="profileDropdown" style="display:none;">
+        <div class="profile-dropdown__name" id="profileName">User</div>
+        <div class="profile-dropdown__email" id="profileEmail">user@email.com</div>
+        <hr />
+        <button class="profile-dropdown__item" id="ttsToggle">
+          <span id="ttsIcon">🔊</span> TTS: <span id="ttsLabel">On</span>
+        </button>
+        <button class="profile-dropdown__item" id="resetBtn">🔄 New Session</button>
+        <button class="profile-dropdown__item profile-dropdown__item--danger" id="logoutBtn">🚪 Logout</button>
+      </div>
+    </div>
+
+    <!-- ══ ServiceNow Alert ═════════════════════════════════ -->
+    <div class="sn-alert-panel" id="snAlertPanel" style="display:none;">
+      <div class="sn-alert-header">
+        <span class="sn-alert-icon">🚨</span>
+        <span class="sn-alert-title">ServiceNow — Incident Created</span>
+        <button class="sn-alert-close" id="snAlertClose">✕</button>
+      </div>
+      <div class="sn-alert-body" id="snAlertBody"></div>
+    </div>
+
+    <!-- ══ Webcam Modal ════════════════════════════════════ -->
+    <div class="webcam-overlay" id="webcamOverlay" style="display:none;">
+      <div class="webcam-modal">
+        <div class="webcam-modal__header">
+          <h2>📸 Face Recognition</h2>
+          <button class="webcam-close-btn" id="webcamCloseBtn">✕</button>
+        </div>
+        <div class="webcam-modal__body">
+          <video id="webcamVideo" autoplay muted playsinline></video>
+          <canvas id="webcamCanvas"></canvas>
+          <div class="webcam-emotion-display" id="webcamEmotionDisplay">
+            <span id="webcamEmoji">🔍</span>
+            <span id="webcamEmotionText">Detecting...</span>
+          </div>
+        </div>
+        <div class="webcam-modal__footer">
+          <button class="webcam-capture-btn" id="webcamCaptureBtn">✓ Capture & Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+
+</html>
