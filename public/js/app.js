@@ -75,6 +75,21 @@ const waStatusTitle = document.getElementById("waStatusTitle");
 const waStatusSub = document.getElementById("waStatusSub");
 const waLog = document.getElementById("waLog");
 
+// SMS
+const smsBtn = document.getElementById("smsBtn");
+const smsOverlay = document.getElementById("smsOverlay");
+const smsCloseBtn = document.getElementById("smsCloseBtn");
+const smsSendBtn = document.getElementById("smsSendBtn");
+const smsLogRefreshBtn = document.getElementById("smsLogRefreshBtn");
+const smsResult = document.getElementById("smsResult");
+const smsStatusDot = document.getElementById("smsStatusDot");
+const smsStatusTitle = document.getElementById("smsStatusTitle");
+const smsStatusSub = document.getElementById("smsStatusSub");
+const smsLogEl = document.getElementById("smsLog");
+const smsFraudToast = document.getElementById("smsFraudToast");
+const smsFraudToastBody = document.getElementById("smsFraudToastBody");
+const smsFraudToastClose = document.getElementById("smsFraudToastClose");
+
 // State
 let chatOpen = false;
 let isProcessing = false;
@@ -309,11 +324,17 @@ function wireAppEvents() {
     snowCreateBtn.addEventListener("click", createIncident);
     snowRefreshBtn.addEventListener("click", loadIncidents);
 
-    // WhatsApp
     waBtn.addEventListener("click", toggleWA);
     waCloseBtn.addEventListener("click", closeWA);
     waSendBtn.addEventListener("click", sendWhatsApp);
     waLogRefreshBtn.addEventListener("click", loadWALog);
+
+    // SMS
+    smsBtn.addEventListener("click", toggleSMS);
+    smsCloseBtn.addEventListener("click", closeSMS);
+    smsSendBtn.addEventListener("click", sendSMSMessage);
+    smsLogRefreshBtn.addEventListener("click", loadSMSLog);
+    smsFraudToastClose.addEventListener("click", () => { smsFraudToast.style.display = "none"; });
 }
 
 // ── Chat ─────────────────────────────────────────────
@@ -470,6 +491,7 @@ function toggleSnow() {
     snowOverlay.style.display = snowOpen ? "flex" : "none";
     chatOverlay.style.display = "none"; chatOpen = false;
     waOverlay.style.display = "none";
+    smsOverlay.style.display = "none"; smsOpen = false;
     if (snowOpen) loadIncidents();
 }
 function closeSnow() { snowOpen = false; snowOverlay.style.display = "none"; }
@@ -533,25 +555,37 @@ function showSnowResult(msg, isError) {
     setTimeout(() => { snowResult.textContent = ""; }, 5000);
 }
 
-// Auto-create incident on fraud detection
+// Auto-detect fraud and trigger all alerts via unified endpoint
 function checkForFraud(text) {
     const fraudKeywords = /fraud|scam|hack|hera|chori|चोरी|धोखा|फ्रॉड|फसवणूक|suspicious|unauthorized|stolen/i;
     if (fraudKeywords.test(text)) {
-        apiCall("/api/servicenow/incident", {
+        const user = getUser();
+        apiCall("/api/fraud/report", {
             method: "POST",
             body: JSON.stringify({
-                shortDescription: `Potential fraud reported via AI Chatbot`,
-                category: "Financial Fraud",
-                priority: "1",
-                description: `Customer message: "${text}"\nEmotion: ${currentEmotion}`,
-                riskScore: 75,
+                message: text,
                 emotion: currentEmotion,
-                transcript: text,
-                callerName: getUser()?.name || "",
-                callerEmail: getUser()?.email || "",
+                phone: user?.phone || "",
+                language: getLang ? getLang() : "en",
+                callerName: user?.name || "",
+                callerEmail: user?.email || "",
             }),
         }).then(data => {
-            addBotMessage(`🚨 A security incident (${data.ticketNumber}) has been auto-created and assigned to the Fraud Response Team. Your account is being monitored.`);
+            // Incident created
+            addBotMessage(`🚨 Security incident (${data.ticketNumber}) created — Risk: ${data.risk?.riskLevel} (${data.risk?.score}/100). Fraud Response Team has been alerted.`);
+
+            // Show SMS toast if alerts were sent
+            if (data.alerts) {
+                const channels = [];
+                if (data.alerts.sms) channels.push("SMS");
+                if (data.alerts.whatsapp) channels.push("WhatsApp");
+                if (data.alerts.voice) channels.push("📞 Phone Call");
+
+                if (channels.length > 0) {
+                    showSMSFraudToast(`Alerts sent via ${channels.join(" + ")} — Incident ${data.ticketNumber}`);
+                    addBotMessage(`📲 Fraud alerts sent via ${channels.join(", ")} to your registered phone number.`);
+                }
+            }
         }).catch(() => { });
     }
 }
@@ -566,6 +600,7 @@ function toggleWA() {
     waOverlay.style.display = waOpen ? "flex" : "none";
     chatOverlay.style.display = "none"; chatOpen = false;
     snowOverlay.style.display = "none";
+    smsOverlay.style.display = "none"; smsOpen = false;
     if (waOpen) { loadWAStatus(); loadWALog(); }
 }
 function closeWA() { waOpen = false; waOverlay.style.display = "none"; }
@@ -630,4 +665,91 @@ function showWAResult(msg, isError) {
     waResult.textContent = msg;
     waResult.className = `snow-result ${isError ? "error" : "success"}`;
     setTimeout(() => { waResult.textContent = ""; }, 5000);
+}
+
+// ════════════════════════════════════════════════════
+//  SMS
+// ════════════════════════════════════════════════════
+
+let smsOpen = false;
+function toggleSMS() {
+    smsOpen = !smsOpen;
+    smsOverlay.style.display = smsOpen ? "flex" : "none";
+    chatOverlay.style.display = "none"; chatOpen = false;
+    snowOverlay.style.display = "none";
+    waOverlay.style.display = "none";
+    if (smsOpen) { loadSMSStatus(); loadSMSLog(); }
+}
+function closeSMS() { smsOpen = false; smsOverlay.style.display = "none"; }
+
+async function loadSMSStatus() {
+    try {
+        const data = await apiCall("/api/sms/status");
+        smsStatusDot.className = `wa-status-dot ${data.configured ? "connected" : "disconnected"}`;
+        smsStatusTitle.textContent = data.configured ? "Connected" : "Simulation Mode";
+        smsStatusSub.textContent = data.configured
+            ? `Phone: ${data.phoneNumber} · ${data.totalSent} SMS sent`
+            : "Add Twilio credentials to .env for real SMS · " + data.totalSent + " simulated";
+    } catch {
+        smsStatusDot.className = "wa-status-dot disconnected";
+        smsStatusTitle.textContent = "Error";
+        smsStatusSub.textContent = "Could not check SMS status";
+    }
+}
+
+async function sendSMSMessage() {
+    const phone = document.getElementById("smsPhone").value.trim();
+    const msg = document.getElementById("smsMessage").value.trim();
+    if (!phone || !msg) { showSMSResult("Phone and message required.", true); return; }
+
+    smsSendBtn.disabled = true;
+    smsSendBtn.textContent = "Sending...";
+    try {
+        await apiCall("/api/sms/send", {
+            method: "POST",
+            body: JSON.stringify({ to: phone, message: msg }),
+        });
+        showSMSResult("✅ SMS sent successfully!", false);
+        document.getElementById("smsMessage").value = "";
+        loadSMSLog();
+    } catch (err) {
+        showSMSResult(`❌ ${err.message}`, true);
+    } finally {
+        smsSendBtn.disabled = false;
+        smsSendBtn.textContent = "📲 Send SMS";
+    }
+}
+
+async function loadSMSLog() {
+    try {
+        const data = await apiCall("/api/sms/log");
+        const messages = data.messages || [];
+        if (!messages.length) {
+            smsLogEl.innerHTML = '<p class="snow-empty">No SMS sent yet.</p>';
+            return;
+        }
+        smsLogEl.innerHTML = messages.slice(-20).map(m => `
+            <div class="wa-log-msg wa-log-msg--out">
+                <div class="wa-log-msg__from">${m.source === "fraud-alert" ? "🚨 Fraud Alert → " : "📤 To: "}${m.to || ""}</div>
+                <div class="wa-log-msg__text">${esc(m.message.substring(0, 200))}</div>
+                <div class="wa-log-msg__time">${m.simulated ? "⚡ Simulated · " : ""}${new Date(m.timestamp).toLocaleString()}</div>
+            </div>
+        `).join("");
+    } catch { smsLogEl.innerHTML = '<p class="snow-empty">Failed to load SMS log.</p>'; }
+}
+
+function showSMSResult(msg, isError) {
+    smsResult.textContent = msg;
+    smsResult.className = `snow-result ${isError ? "error" : "success"}`;
+    setTimeout(() => { smsResult.textContent = ""; }, 5000);
+}
+
+function showSMSFraudToast(body) {
+    smsFraudToastBody.textContent = body;
+    smsFraudToast.style.display = "flex";
+    smsFraudToast.classList.add("sms-fraud-toast--show");
+    setTimeout(() => {
+        smsFraudToast.classList.remove("sms-fraud-toast--show");
+        setTimeout(() => { smsFraudToast.style.display = "none"; }, 400);
+    }, 6000);
 }

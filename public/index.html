@@ -196,6 +196,10 @@
                     <span class="bottom-btn__icon">📱</span>
                     <span class="bottom-btn__label">WhatsApp</span>
                 </button>
+                <button id="smsBtn" class="bottom-btn" aria-label="SMS Alerts">
+                    <span class="bottom-btn__icon">📲</span>
+                    <span class="bottom-btn__label">SMS</span>
+                </button>
                 <button id="chatToggleBtn" class="bottom-btn" aria-label="Toggle Chat">
                     <span class="bottom-btn__icon">💬</span>
                     <span class="bottom-btn__label" data-i18n="chat">Chat</span>
@@ -348,6 +352,66 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ═══════════════════════════════════════════
+                 SMS OVERLAY
+                 ═══════════════════════════════════════════ -->
+            <div id="smsOverlay" class="chat-overlay" style="display:none">
+                <div class="chat-overlay__header">
+                    <div class="chat-overlay__title">📲 SMS Notifications</div>
+                    <button id="smsCloseBtn" class="chat-overlay__close">✕</button>
+                </div>
+                <div class="wa-body">
+                    <!-- Status -->
+                    <div class="wa-status-card" id="smsStatusCard">
+                        <div class="wa-status-dot" id="smsStatusDot"></div>
+                        <div>
+                            <div class="wa-status-title" id="smsStatusTitle">Checking connection...</div>
+                            <div class="wa-status-sub" id="smsStatusSub">Loading</div>
+                        </div>
+                    </div>
+
+                    <!-- Send SMS -->
+                    <div class="snow-section">
+                        <h3 class="snow-section__title">Send SMS Message</h3>
+                        <div class="form-group">
+                            <label>Phone Number (with country code)</label>
+                            <input type="tel" id="smsPhone" placeholder="+919876543210">
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea id="smsMessage" rows="2" placeholder="Type SMS message..."></textarea>
+                        </div>
+                        <button id="smsSendBtn" class="auth-btn">📲 Send SMS</button>
+                        <p id="smsResult" class="snow-result"></p>
+                    </div>
+                    <hr>
+                    <!-- SMS Log -->
+                    <div class="snow-section">
+                        <div class="snow-section__header">
+                            <h3 class="snow-section__title">SMS Log</h3>
+                            <button id="smsLogRefreshBtn" class="snow-refresh-btn">🔄</button>
+                        </div>
+                        <div id="smsLog" class="wa-log">
+                            <p class="snow-empty">No SMS sent yet. SMS alerts are auto-sent when fraud is detected.</p>
+                        </div>
+                    </div>
+
+                    <!-- Setup Guide -->
+                    <div class="snow-section wa-setup-guide">
+                        <h3 class="snow-section__title">⚙️ Twilio Setup Guide</h3>
+                        <ol class="wa-steps">
+                            <li>Create a <b>Twilio</b> account at <a href="https://www.twilio.com"
+                                    target="_blank">twilio.com</a></li>
+                            <li>Get your <b>Account SID</b> and <b>Auth Token</b></li>
+                            <li>Get a <b>Twilio Phone Number</b></li>
+                            <li>Add to <code>.env</code>: <code>TWILIO_ACCOUNT_SID</code>,
+                                <code>TWILIO_AUTH_TOKEN</code>, <code>TWILIO_PHONE_NUMBER</code></li>
+                            <li>Restart the server</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ═══════════════════════════════════════════════
@@ -372,6 +436,16 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- SMS Fraud Alert Toast -->
+    <div id="smsFraudToast" class="sms-fraud-toast" style="display:none">
+        <div class="sms-fraud-toast__icon">📲</div>
+        <div class="sms-fraud-toast__content">
+            <div class="sms-fraud-toast__title">SMS Fraud Alert Sent</div>
+            <div class="sms-fraud-toast__body" id="smsFraudToastBody">Alert sent to registered number</div>
+        </div>
+        <button class="sms-fraud-toast__close" id="smsFraudToastClose">✕</button>
     </div>
 
     <script type="module" src="/js/app.js"></script>
