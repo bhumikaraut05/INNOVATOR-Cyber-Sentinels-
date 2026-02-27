@@ -87,7 +87,56 @@ app.post("/send-sms", async (req, res) => {
     }
 });
 
-// ── Health check ─────────────────────────────────────
+// ── POST /create-incident — Direct ServiceNow Incident ─
+app.post("/create-incident", async (req, res) => {
+    try {
+        const { message, category, urgency, priority } = req.body;
+        if (!message) return res.status(400).json({ error: "message is required" });
+
+        const SNOW_INSTANCE = process.env.SERVICENOW_INSTANCE;
+        const SNOW_USER = process.env.SERVICENOW_USER;
+        const SNOW_PASSWORD = process.env.SERVICENOW_PASSWORD;
+
+        if (!SNOW_INSTANCE || !SNOW_USER || !SNOW_PASSWORD) {
+            return res.status(500).json({ error: "ServiceNow not configured in .env" });
+        }
+
+        const url = `https://${SNOW_INSTANCE}/api/now/table/incident`;
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": "Basic " + Buffer.from(`${SNOW_USER}:${SNOW_PASSWORD}`).toString("base64"),
+            },
+            body: JSON.stringify({
+                short_description: message,
+                description: "Created from AI Chatbot",
+                category: category || "IT",
+                urgency: urgency || "2",
+                priority: priority || "2",
+            }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            console.error("❌ ServiceNow Error:", data);
+            return res.status(response.status).json({ error: data.error?.message || "ServiceNow API error" });
+        }
+
+        console.log(`✅ ServiceNow Incident Created: ${data.result.number}`);
+        res.json({
+            success: true,
+            ticketNumber: data.result.number,
+            sysId: data.result.sys_id,
+            state: data.result.state,
+        });
+    } catch (err) {
+        console.error("❌ Incident Error:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get("/api/health", (req, res) => {
     const twilioService = require("./services/twilioService");
     const serviceNowService = require("./services/serviceNowService");

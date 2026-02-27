@@ -406,7 +406,8 @@
                             <li>Get your <b>Account SID</b> and <b>Auth Token</b></li>
                             <li>Get a <b>Twilio Phone Number</b></li>
                             <li>Add to <code>.env</code>: <code>TWILIO_ACCOUNT_SID</code>,
-                                <code>TWILIO_AUTH_TOKEN</code>, <code>TWILIO_PHONE_NUMBER</code></li>
+                                <code>TWILIO_AUTH_TOKEN</code>, <code>TWILIO_PHONE_NUMBER</code>
+                            </li>
                             <li>Restart the server</li>
                         </ol>
                     </div>
@@ -449,6 +450,15 @@
     </div>
 
     <script type="module" src="/js/app.js"></script>
+
+    <!-- ServiceNow Web Chat Widget -->
+    <script>
+        window.NOW = window.NOW || {};
+        NOW.chatConfig = {
+            siteId: "dev194879"
+        };
+    </script>
+    <script src="https://dev194879.service-now.com/scripts/sn/common/ui/widget_loader.js"></script>
 </body>
 
 </html>
